@@ -183,7 +183,7 @@ class StackedIndependentGenerator(Generator):
     # def mu(self):
     #     mu = []
     #     for idx, g in enumerate(self.generators):
-    #         pm = np.copy(g.mu)
+    #         pm = np.copy(g._mu)
     #         if idx != 0:
     #             pm[0] = 0
     #         mu.append(pm)

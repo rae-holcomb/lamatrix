@@ -63,11 +63,11 @@ class BoundedGenerator(MathMixins, StackedIndependentGenerator):
         return str1
 
     @property
-    def mu(self):
+    def _mu(self):
         return self.prior_mu if self.fit_mu is None else self.fit_mu
 
     @property
-    def sigma(self):
+    def _sigma(self):
         return self.prior_sigma if self.fit_sigma is None else self.fit_sigma
 
     @property
@@ -76,7 +76,9 @@ class BoundedGenerator(MathMixins, StackedIndependentGenerator):
 
     @property
     def prior_sigma(self):
-        return np.hstack([self.generator.prior_sigma] * self.nbounds)
+        ps = self.prior_sigma_raw.copy()
+        ps[self.sigma_mask] = 0.
+        return ps
 
     @property
     def arg_names(self):
@@ -144,7 +146,7 @@ class BoundedGenerator(MathMixins, StackedIndependentGenerator):
         return [
             (
                 "w_{{{i}, {idx}}}",
-                (self.mu[idx], self.sigma[idx]),
+                (self._mu[idx], self._sigma[idx]),
                 (self.prior_mu[idx], self.prior_sigma[idx]),
             )
             for idx in range(self.width)

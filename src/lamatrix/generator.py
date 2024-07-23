@@ -67,7 +67,7 @@ class Generator(ABC):
         if self.fit_mu is None:
             raise ValueError("Can not update priors before fitting.")
         self.prior_mu = self.fit_mu.copy()
-        self.prior_sigma = self.fit_sigma.copy()
+        self.prior_sigma_raw = self.fit_sigma.copy()
         return
 
     def _create_save_data(self):
@@ -198,11 +198,11 @@ class Generator(ABC):
         return fit_mu, fit_sigma
 
     @property
-    def mu(self):
+    def _mu(self):
         return self.prior_mu if self.fit_mu is None else self.fit_mu
 
     @property
-    def sigma(self):
+    def _sigma(self):
         return self.prior_sigma if self.fit_sigma is None else self.fit_sigma
 
     @property
@@ -215,8 +215,8 @@ class Generator(ABC):
         X = self.design_matrix(*args, **kwargs)
         if self.data_shape is not None:
             if X.shape[0] == np.prod(self.data_shape):
-                return X.dot(self.mu).reshape(self.data_shape)
-        return X.dot(self.mu)
+                return X.dot(self._mu).reshape(self.data_shape)
+        return X.dot(self._mu)
 
     def __call__(self, *args, **kwargs):
         return self.evaluate(*args, **kwargs)
@@ -224,15 +224,15 @@ class Generator(ABC):
     def sample(self, size=None, *args, **kwargs):
         X = self.design_matrix(*args, **kwargs)
         if size is None:
-            return X.dot(np.random.multivariate_normal(self.mu, self.cov))
-        return X.dot(np.random.multivariate_normal(self.mu, self.cov, size=size).T)
+            return X.dot(np.random.multivariate_normal(self._mu, self.cov))
+        return X.dot(np.random.multivariate_normal(self._mu, self.cov, size=size).T)
 
     @property
     def table_properties(self):
         return [
             (
                 "w_{idx}",
-                (self.mu[idx], self.sigma[idx]),
+                (self._mu[idx], self._sigma[idx]),
                 (self.prior_mu[idx], self.prior_sigma[idx]),
             )
             for idx in range(self.width)

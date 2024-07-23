@@ -36,7 +36,7 @@ class lnGaussian1DGenerator(MathMixins, Generator):
                 raise AttributeError("Pass stddev prior as a tuple with (mu, sigma)")
 
             self.prior_mu[1] = -1 / (2 * self.stddev_prior[0] ** 2)
-            self.prior_sigma[1] = self.mu[1] - (
+            self.prior_sigma[1] = self._mu[1] - (
                 -1 / 2 * (self.stddev_prior[0] + self.stddev_prior[1]) ** 2
             )
 
@@ -91,12 +91,12 @@ class lnGaussian1DGenerator(MathMixins, Generator):
 
     @property
     def A(self):
-        return self.mu[0], self.sigma[0]
+        return self._mu[0], self._sigma[0]
 
     @property
     def stddev(self):
-        stddev = np.sqrt(-(1 / (2 * self.mu[1])))
-        stddev_err = -(self.sigma[1])/(2 * np.sqrt(2) * self.mu[1] ** (3/2))
+        stddev = np.sqrt(-(1 / (2 * self._mu[1])))
+        stddev_err = -(self._sigma[1])/(2 * np.sqrt(2) * self._mu[1] ** (3/2))
         return stddev, stddev_err
 
     @property
@@ -105,7 +105,7 @@ class lnGaussian1DGenerator(MathMixins, Generator):
             *[
                 (
                     "w_{idx}",
-                    (self.mu[idx], self.sigma[idx]),
+                    (self._mu[idx], self._sigma[idx]),
                     (self.prior_mu[idx], self.prior_sigma[idx]),
                 )
                 for idx in range(self.width)
@@ -206,14 +206,14 @@ class dlnGaussian1DGenerator(MathMixins, Generator):
 
     @property
     def shift(self):
-        return self.mu[1], self.sigma[1]
+        return self._mu[1], self._sigma[1]
 
     @property
     def table_properties(self):
         return [
             (
                 "w_0",
-                (self.mu[0], self.sigma[0]),
+                (self._mu[0], self._sigma[0]),
                 (self.prior_mu[0], self.prior_sigma[0]),
             ),
             ("s", self.shift, (self.prior_mu[1], self.prior_sigma[1])),
@@ -255,7 +255,7 @@ class lnGaussian2DGenerator(MathMixins, Generator):
                 raise AttributeError("Pass stddev_x prior as a tuple with (mu, sigma)")
 
             self.prior_mu[1] = -1 / (2 * self.stddev_x_prior[0] ** 2)
-            self.prior_sigma[1] = self.mu[1] - (
+            self.prior_sigma[1] = self._mu[1] - (
                 -1 / 2 * (self.stddev_x_prior[0] + self.stddev_x_prior[1]) ** 2
             )
 
@@ -266,7 +266,7 @@ class lnGaussian2DGenerator(MathMixins, Generator):
                 raise AttributeError("Pass stddev_y prior as a tuple with (mu, sigma)")
 
             self.prior_mu[2] = -1 / (2 * self.stddev_y_prior[0] ** 2)
-            self.prior_sigma[2] = self.mu[2] - (
+            self.prior_sigma[2] = self._mu[2] - (
                 -1 / 2 * (self.stddev_y_prior[0] + self.stddev_y_prior[1]) ** 2
             )
 
@@ -328,26 +328,26 @@ class lnGaussian2DGenerator(MathMixins, Generator):
 
     @property
     def A(self):
-        return self.mu[0], self.sigma[0]
+        return self._mu[0], self._sigma[0]
 
     @property
     def rho(self):
-        rho = np.sqrt(self.mu[3] ** 2 / np.abs(self.mu[1] * self.mu[2])) / 2
-        err1 = np.abs((self.mu[3] ** 2) * 2 * self.sigma[3] / self.mu[3])
+        rho = np.sqrt(self._mu[3] ** 2 / np.abs(self._mu[1] * self._mu[2])) / 2
+        err1 = np.abs((self._mu[3] ** 2) * 2 * self._sigma[3] / self._mu[3])
         rho_err = np.abs(rho) * np.sqrt(
-            (err1 / self.mu[3]) ** 2
-            + (self.sigma[1] / self.mu[1]) ** 2
-            + (self.sigma[2] / self.mu[2]) ** 2
+            (err1 / self._mu[3]) ** 2
+            + (self._sigma[1] / self._mu[1]) ** 2
+            + (self._sigma[2] / self._mu[2]) ** 2
         )
         return rho, rho_err
 
     @property
     def stddev_x(self):
-        stddev_x = np.sqrt(-(1 / (2 * self.mu[1] * (1 - self.rho[0] ** 2))))
+        stddev_x = np.sqrt(-(1 / (2 * self._mu[1] * (1 - self.rho[0] ** 2))))
         stddev_x_2_err = np.sqrt(
             (
                 (np.abs((self.rho[0]) * 2 * self.rho[1] / self.rho[0])) ** 2
-                + (self.sigma[1] / self.mu[1]) ** 2
+                + (self._sigma[1] / self._mu[1]) ** 2
             )
         )
         stddev_x_err = np.abs(stddev_x * -0.5 * (stddev_x_2_err / stddev_x**2))
@@ -355,11 +355,11 @@ class lnGaussian2DGenerator(MathMixins, Generator):
 
     @property
     def stddev_y(self):
-        stddev_y = np.sqrt(-(1 / (2 * self.mu[2] * (1 - self.rho[0] ** 2))))
+        stddev_y = np.sqrt(-(1 / (2 * self._mu[2] * (1 - self.rho[0] ** 2))))
         stddev_y_2_err = np.sqrt(
             (
                 (np.abs((self.rho[0]) * 2 * self.rho[1] / self.rho[0])) ** 2
-                + (self.sigma[2] / self.mu[2]) ** 2
+                + (self._sigma[2] / self._mu[2]) ** 2
             )
         )
         stddev_y_err = np.abs(stddev_y * -0.5 * (stddev_y_2_err / stddev_y**2))
@@ -371,7 +371,7 @@ class lnGaussian2DGenerator(MathMixins, Generator):
             *[
                 (
                     "w_{idx}",
-                    (self.mu[idx], self.sigma[idx]),
+                    (self._mu[idx], self._sigma[idx]),
                     (self.prior_mu[idx], self.prior_sigma[idx]),
                 )
                 for idx in range(self.width)
@@ -499,18 +499,18 @@ class dlnGaussian2DGenerator(MathMixins, Generator):
 
     @property
     def shift_x(self):
-        return self.mu[1], self.sigma[1]
+        return self._mu[1], self._sigma[1]
 
     @property
     def shift_y(self):
-        return self.mu[2], self.sigma[2]
+        return self._mu[2], self._sigma[2]
 
     @property
     def table_properties(self):
         return [
             (
                 "w_0",
-                (self.mu[0], self.sigma[0]),
+                (self._mu[0], self._sigma[0]),
                 (self.prior_mu[0], self.prior_sigma[0]),
             ),
             ("s_x", self.shift_x, (self.prior_mu[1], self.prior_sigma[1])),

@@ -79,7 +79,7 @@ class Polynomial1DGeneratorOdd(MathMixins, Generator):
 
     @property
     def offset(self):
-        return self.mu[0], self.sigma[0]
+        return self._mu[0], self._sigma[0]
 
     @property
     def _equation(self):
@@ -93,11 +93,11 @@ class Polynomial1DGeneratorOdd(MathMixins, Generator):
     @property
     def gradient(self):
         return dPolynomial1DGenerator(
-            weights=self.mu,
+            weights=self._mu,
             x_name=self.x_name,
             polyorder=self.polyorder,
             data_shape=self.data_shape,
-            offset_prior=(self.mu[1], self.sigma[1]),
+            offset_prior=(self._mu[1], self._sigma[1]),
         )
 
 
@@ -167,7 +167,7 @@ class Polynomial1DGenerator(MathMixins, Generator):
 
     @property
     def offset(self):
-        return self.mu[0], self.sigma[0]
+        return self._mu[0], self._sigma[0]
 
     @property
     def _equation(self):
@@ -180,11 +180,11 @@ class Polynomial1DGenerator(MathMixins, Generator):
     @property
     def gradient(self):
         return dPolynomial1DGenerator(
-            weights=self.mu,
+            weights=self._mu,
             x_name=self.x_name,
             polyorder=self.polyorder,
             data_shape=self.data_shape,
-            offset_prior=(self.mu[1], self.sigma[1]),
+            offset_prior=(self._mu[1], self._sigma[1]),
         )
 
 
@@ -262,7 +262,7 @@ class dPolynomial1DGenerator(MathMixins, Generator):
 
     @property
     def offset(self):
-        return self.mu[0], self.sigma[0]
+        return self._mu[0], self._sigma[0]
 
     @property
     def _mu_letter(self):
@@ -279,16 +279,18 @@ class dPolynomial1DGenerator(MathMixins, Generator):
 
 
 class ConstantGenerator(Polynomial1DGenerator):
+    """modify this to work as an OffsetGenerator"""
     def __init__(
             self,
-            x_name: str = "x",
+            # x_name: str = "x",
             prior_mu=None,
             prior_sigma=None,
+            sigma_mask = None,
             offset_prior=None,
             data_shape=None,
         ):
     
-       return super().__init__(x_name=x_name, polyorder=0, prior_mu=prior_mu, prior_sigma=prior_sigma, offset_prior=offset_prior, data_shape=data_shape)
+       return super().__init__(x_name=x_name, polyorder=0, prior_mu=prior_mu, prior_sigma=prior_sigma, sigma_mask=sigma_mask, offset_prior=offset_prior, data_shape=data_shape)
         
 
 class SinusoidGenerator(MathMixins, Generator):
@@ -298,6 +300,7 @@ class SinusoidGenerator(MathMixins, Generator):
         nterms: int = 1,
         prior_mu=None,
         prior_sigma=None,
+        sigma_mask = None,
         offset_prior=None,
         data_shape=None,
     ):
@@ -305,7 +308,7 @@ class SinusoidGenerator(MathMixins, Generator):
         self.data_shape = data_shape
         self.x_name = x_name
         self._validate_arg_names()
-        self._validate_priors(prior_mu, prior_sigma, offset_prior=offset_prior)
+        self._validate_priors(prior_mu, prior_sigma, sigma_mask=sigma_mask, offset_prior=offset_prior)
         self.fit_mu = None
         self.fit_sigma = None
 
@@ -327,6 +330,7 @@ class SinusoidGenerator(MathMixins, Generator):
             "x_name",
             "prior_mu",
             "prior_sigma",
+            "sigma_mask",
             "offset_prior",
             "data_shape",
             "nterms",
@@ -383,7 +387,7 @@ class SinusoidGenerator(MathMixins, Generator):
     def gradient(self):
         return dSinusoidGenerator(
             nterms=self.nterms,
-            weights=self.mu,
+            weights=self._mu,
             x_name=self.x_name,
             data_shape=self.data_shape,
         )
@@ -397,6 +401,7 @@ class dSinusoidGenerator(MathMixins, Generator):
         nterms: int = 1,
         prior_mu=None,
         prior_sigma=None,
+        sigma_mask=None,
         offset_prior=None,
         data_shape=None,
     ):
@@ -405,7 +410,7 @@ class dSinusoidGenerator(MathMixins, Generator):
         self.data_shape = data_shape
         self.x_name = x_name
         self._validate_arg_names()
-        self._validate_priors(prior_mu, prior_sigma, offset_prior=offset_prior)
+        self._validate_priors(prior_mu, prior_sigma, sigma_mask=sigma_mask, offset_prior=offset_prior)
         self.fit_mu = None
         self.fit_sigma = None
 
@@ -428,6 +433,7 @@ class dSinusoidGenerator(MathMixins, Generator):
             "x_name",
             "prior_mu",
             "prior_sigma",
+            "sigma_mask",
             "offset_prior",
             "data_shape",
             "nterms",

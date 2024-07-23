@@ -145,7 +145,7 @@ class Spline1DGenerator(MathMixins, SplineMixins, Generator):
 
     @property
     def offset(self):
-        return self.mu[0], self.sigma[0]
+        return self._mu[0], self._sigma[0]
 
     @property
     def _equation(self):
@@ -173,7 +173,7 @@ class Spline1DGenerator(MathMixins, SplineMixins, Generator):
     @property
     def gradient(self):
         return dSpline1DGenerator(
-            weights=self.mu,
+            weights=self._mu,
             knots=self.knots,
             splineorder=self.splineorder,
             data_shape=self.data_shape,
@@ -253,7 +253,7 @@ class dSpline1DGenerator(MathMixins, SplineMixins, Generator):
 
     @property
     def offset(self):
-        return self.mu[0], self.sigma[0]
+        return self._mu[0], self._sigma[0]
 
     @property
     def _equation(self):
@@ -261,14 +261,14 @@ class dSpline1DGenerator(MathMixins, SplineMixins, Generator):
 
     @property
     def shift_x(self):
-        return self.mu[1], self.sigma[1]
+        return self._mu[1], self._sigma[1]
 
     @property
     def table_properties(self):
         return [
             (
                 "w_0",
-                (self.mu[0], self.sigma[0]),
+                (self._mu[0], self._sigma[0]),
                 (self.prior_mu[0], self.prior_sigma[0]),
             ),
             ("s_x", self.shift_x, (self.prior_mu[1], self.prior_sigma[1])),
