@@ -6,137 +6,84 @@ from abc import ABC, abstractmethod
 
 from .generator_2 import Generator
 
-# to do 7/22
-# make PolynomialGenerator and OffsetGenerator
-# Implement option 1a for multiplication, aka CrosstermGenerator
-# Implement the inclusion of OffsetGenerator into StackedIndependentGenerator
+def combine_equations(*equations):
+    # Base case: if there's only one equation, just return it
+    if len(equations) == 1:
+        return equations[0]
 
+    # Step case: combine the first two equations and recursively call the function with the result
+    combined = [f + e for f in equations[1] for e in equations[0]]
 
-# Questions
-# Why are __add__ and __mul__ only defined for the Independent generator?
+    # If there are more equations left, combine further
+    if len(equations) > 2:
+        return combine_equations(combined, *equations[2:])
+    else:
+        return np.asarray(combined)
 
-g1 = Polynomial()
-g2 = Spline()
+def combine_sigmas(*sigmas):
+    # Base case: if there's only one equation, just return it
+    if len(sigmas) == 1:
+        return sigmas[0]
 
-g1.prior_distribution --> [(value, value), (value, value), (value, value)]
+    if (np.isfinite(sigmas[0])).any():
+        if sigmas[1][0] == np.inf:
+            sigmas[1][0] = 0
+    if (np.isfinite(sigmas[1])).any():
+        if sigmas[0][0] == np.inf:
+            sigmas[0][0] = 0
 
-SIG = g1 + g2
+    # Step case: combine the first two equations and recursively call the function with the result
+    combined = [(f**2 + e**2) ** 0.5 for f in sigmas[1] for e in sigmas[0]]
 
-SIG.update_the_priors_somehow_for_g1_to_zeros()
+    # If there are more equations left, combine further
+    if len(sigmas) > 2:
+        return combine_sigmas(combined, *sigmas[2:])
+    else:
+        return np.asarray(combined)
+    
+def combine_mus(*mus):
+    return combine_equations(*mus)
 
-SIG[0].prior_distribution --> [(0, 0), (0, 0), (0, 0)]
-g1.prior_distribution --> [(value, value), (value, value), (value, value)]
+def combine_distibutions(*distributions):
+    # separate the mus and sigmas into separate arrays
+    c_mus = combine_mus(*[distribution[0] for distribution in distributions])
+    c_sigmas =combine_sigmas(*[distribution[1] for distribution in distributions])
 
+    # zip them back into a distributions tuple and return
+    return [(c_mus[i], c_sigmas[i]) for i in range(len(c_mus))]
 
-SIG.breakdown(0) --> offset, generators with no offset
-SIG = SIG[0] + SIG[1]
+def combine_matrices(*matrices):
+    # Base case: if there's only one equation, just return it
+    if len(matrices) == 1:
+        return matrices[0]
+    # Step case: combine the first two equations and recursively call the function with the result
+    combined = [matrices[0] * f[:, None] for f in matrices[1].T]
 
-SIG[0] --> missing offset term
-SIG[1] --> missing offset term
-SIG[2] --> missing offset term
-...
-SIG = offset + SIG[0] + SIG[1]
-
-
-g1 + g2
-g2 + g1
-
-
-SDG = g1 * g2
-cannot do this: SDG[0]
-
-######
-
-SIG is made up of an offset, an augmented deepcopy of g1, and an augmented deepcopy of g2
-
-all design matrices have a column of ones
-
-NO design matrices have columns of ones, and to fit a model you explicitly must add a constant offset term
-
--> SplineGenerator() -> DM is splines EXCEPT ones
--> PolynomialGenerator() -> Is polynomial EXCEPT ones
--> OffsetGenerator() -> DM is just ones
-
-SIG = (PolynomialGenerator('v', ...) + Spline('r', ...) + OffsetGenerator())
-
-SIG[0]
-
-class OffsetGenerator(PolynomialGenerator):
-    """A generator which has no variable, and whos design matrix is entirely ones.""""
-    def __init__(self):
-        super().__init__(polyorder=0)
-
-    def __repr__(self):
-        ....
-
-SIG.set_prior(index=15, value=1)
-SIG[1].set_prior(index=15, value=1)
-
-
-SIG = (OffsetGenerator() + SinusoidGenerator('x', ...))
-SIG[0]
-SIG[1]
-
-(SIG + GaussianGenerator('y'...))
-
-
-# We should protect against multiple OffsetGenerators being added to an independent generator
-# also pay attention to whether stacking stacked independent gens appends or leads to a nested structure (it should append)
-# fit parameters should be zero'd out after stacking, if people want to use the fit parameters they should update their priors.
-#####
-
-p1 = PolynomialGenerator('v', ..., polyorder=4)
-p2 = PolynomialGenerator('z', ..., polyorder=4)
-
-p1 * p2
-
-(1 + v + v**2 + v**3 + v**4) 
-+ z(1 + v + v**2 + v**3 + v**4) 
-+ z**2(1 + v + v**2 + v**3 + v**4) 
-
-1. Should multiply add in an offset term to ensure that the non-cross-terms are captured?
-1a. p1 * p2 --> p1 + p2 + p1 x p2
-2. Should we force users to do that explicly
-
-CosineGenerator(phi) * SineGenerator(phi)
-
--> Cosine*Sine
--> Cosine*Sine, Sine, Cosine
-
-
-p1 * p2 = p1 + p2 + p1 x p2
-
-StackedIndependentGenerator([p1, p2, CrossTermGenerator(p1xp2)])
-
-
-
-
-# offsets are special cases
-# What happens when people make degenerate models? 
-
-
-# g1 == SIG[0]? 
-# g2 == SIG[1]?
+    # If there are more equations left, combine further
+    if len(matrices) > 2:
+        return np.hstack(combine_matrices(combined, *matrices[2:]))
+    else:
+        return np.hstack(combined)
 
 
 class StackedIndependentGenerator(Generator):
     def __init__(self, *args):
-        # we need to check that every arg is a generator?
-        self.generators = [a.copy() for a in args]
-        self.fit_distributions = [(None, None) for g in self.generators for v in g.fit_distributions]
-        # self.fit_distributions = [v for g in self.generators for v in g.fit_distributions]
+        # Check that every arg is a generator
+        if not np.all([isinstance(a, Generator) for a in args]):
+            raise ValueError("Can only combine `Generator` objects.")
 
-
-    def __init__(self, *args, **kwargs):
+        # Check that every generator has the same data shape
         if (
             not len(np.unique([a.data_shape for a in args if a.data_shape is not None]))
             <= 1
         ):
             raise ValueError("Can not have different `data_shape`.")
+
         self.generators = [a.copy() for a in args]
         self.data_shape = self.generators[0].data_shape
-        # self.fit_mu = None
-        # self.fit_sigma = None
+        self.lengths = [g.width for g in self.generators]
+        self.fit_distributions = [(None, None) for g in self.generators for v in g.fit_distributions]
+        # self.fit_distributions = [v for g in self.generators for v in g.fit_distributions]
 
     def __repr__(self):
         fit = "fit" if self.fit_mu is not None else ""
@@ -147,6 +94,7 @@ class StackedIndependentGenerator(Generator):
         super().set_prior(index, value)
 
         # add in another line to set the prior for the corresponding sub generator
+        # see self.fit() for code to work from on this
         raise NotImplementedError
 
     def prior_distributions(self):
@@ -163,3 +111,50 @@ class StackedIndependentGenerator(Generator):
     @property
     def nvectors(self):
         return np.sum([g.nvectors for g in self.generators])
+
+    def fit(self, *args, **kwargs):
+        self.fit_mu, self.fit_sigma = self._fit(*args, **kwargs)
+        # lengths = [g.width for g in self.generators]
+        mu, sigma = (
+            np.array_split(self.fit_mu, np.cumsum(self.lengths))[:-1],
+            np.array_split(self.fit_sigma, np.cumsum(self.lengths))[:-1],
+        )
+        for idx, mu0, sigma0 in zip(np.arange(len(mu)), mu, sigma):
+            self[idx].fit_mu = mu0
+            self[idx].fit_sigma = sigma0
+
+        indices = np.cumsum([0, *[g.width for g in self.generators]])
+        for idx, a, b in zip(range(len(indices) - 1), indices[:-1], indices[1:]):
+            self[idx].cov = self.cov[a:b, a:b]
+
+
+class CrosstermGenerator(StackedIndependentGenerator):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.prior_distributions = combine_distibutions(*[g.prior_distributions for g in self.generators])
+
+    def design_matrix(self, *args, **kwargs):
+        return combine_matrices(
+            *[g.design_matrix(*args, **kwargs) for g in self.generators]
+        )
+    
+    @property
+    def _equation(self):
+        return combine_equations(*[g._equation for g in self.generators])
+
+    @property
+    def arg_names(self):
+        return np.unique(np.hstack([list(g.arg_names) for g in self.generators]))
+
+    @property
+    def nvectors(self):
+        return len(self.arg_names)
+
+    @property
+    def width(self):
+        return np.prod([g.width for g in self.generators])
+    
+    def fit(self, *args, **kwargs):
+        self.fit_mu, self.fit_sigma = self._fit(*args, **kwargs)
+
+

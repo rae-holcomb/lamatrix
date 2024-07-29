@@ -3,19 +3,16 @@ from typing import Optional, Tuple, Union, List, Dict
 import numpy as np
 from copy import deepcopy
 from abc import ABC, abstractmethod
-from .math import MathMixins
+from .math_mixins import MathMixins
 
 
 
 class Generator(ABC):
     def __init__(
         self,
-        x_name: str = "x",
         prior_distributions : List[Tuple]=None,
+        *args, **kwargs
     ):
-        """Note: There won't be an init in the actual generator class, it will have to be instantiated in the specific classes that inherit from it."""
-        self.x_name = x_name
-
         # prior_distrbutions (always normal, and always specfied by mean and standard deviation)
         # fit_distributions (always normal, and always specfied by mean and standard deviation)
 
@@ -25,8 +22,13 @@ class Generator(ABC):
             self._validate_distributions(prior_distributions)
             self.prior_distributions = prior_distributions
 
-        # we could also have fit_values start as = priors, so there is always a valid value in it?
         self.fit_distributions = [(None, None)] * self.width
+
+
+    def _validate_arg_names(self):
+        for arg in self.arg_names:
+            if not isinstance(arg, str):
+                raise ValueError("Argument names must be strings.")
 
     @property
     @abstractmethod
@@ -152,25 +154,27 @@ class Generator(ABC):
         return fit_mean, fit_std
 
 
-class Polynomial1DGenerator(MathMixins, Generator):
+class Polynomial1DGenerator(Generator):
     def __init__(
         self,
         x_name: str = "x",
         polyorder: int = 3,
         prior_distributions=None,
         data_shape=None,
-    ):
+    ):        
         if polyorder < 1:
             raise ValueError("Must have polyorder >= 1.")
         self.x_name = x_name
-        self._validate_arg_names()
+        # self._validate_arg_names()
         self.polyorder = polyorder
         self.data_shape = data_shape
-        self._validate_priors(prior_distributions)
+        
+        # calling this will validate the priors fill out the default if None is given
+        super().__init__(prior_distributions=prior_distributions)
 
     @property
     def width(self):
-        return self.polyorder + 1
+        return self.polyorder
 
     @property
     def nvectors(self):
@@ -180,15 +184,15 @@ class Polynomial1DGenerator(MathMixins, Generator):
     def arg_names(self):
         return {self.x_name}
 
-    @property
-    def _INIT_ATTRS(self):
-        return [
-            "x_name",
-            "prior_mu",
-            "prior_sigma",
-            "data_shape",
-            "polyorder",
-        ]
+    # @property
+    # def _INIT_ATTRS(self):
+    #     return [
+    #         "x_name",
+    #         "prior_mu",
+    #         "prior_sigma",
+    #         "data_shape",
+    #         "polyorder",
+    #     ]
 
     def design_matrix(self, *args, **kwargs):
         """Build a 1D polynomial in x
@@ -218,6 +222,10 @@ class Polynomial1DGenerator(MathMixins, Generator):
         ]
         #        eqn[0] = ""
         return eqn
+    
+    def get_term(self, index):
+        """Returns the term in the equation corresponding to a certain index. This will make it easier for the user to make sure they are working with the right element of the design matrix."""
+        raise NotImplementedError
 
     # @property
     # def gradient(self):
@@ -228,3 +236,52 @@ class Polynomial1DGenerator(MathMixins, Generator):
     #         data_shape=self.data_shape,
     #         offset_prior=(self._mu[1], self._sigma[1]),
     #     )
+
+
+class OffsetGenerator(Generator):
+    """
+    A generator which has no variable, and whos design matrix is entirely ones.
+    """
+    def __init__(self, prior_distributions=None):
+        super().__init__(prior_distributions=prior_distributions)
+
+        # need to define self.data_shape somehow... 
+
+    def __repr__(self):
+        ...
+
+    @property
+    def width(self):
+        return 1
+
+    @property
+    def nvectors(self):
+        return 0
+
+    @property
+    def arg_names(self):
+        return {}
+    
+    @property
+    def _equation(self):
+        return []
+    
+    def design_matrix(self, *args, **kwargs):
+        """Build a 1D polynomial in x
+
+        Parameters
+        ----------
+        {} : np.ndarray
+            Vector to create polynomial of
+
+        Returns
+        -------
+        X : np.ndarray
+            Design matrix with shape (len(x), self.nvectors)
+        """
+        print((kwargs))
+        if len(kwargs) < 1:
+            raise ValueError("Cannot create design matrix without data.")
+
+        x = np.ones_like(next(iter(kwargs.values())))
+        return np.atleast_2d(x).T

@@ -3,7 +3,7 @@
 import numpy as np
 
 from ..generator import Generator
-from ..math import MathMixins
+from ..math_mixins import MathMixins
 
 __all__ = [
     "Spline1DGenerator",

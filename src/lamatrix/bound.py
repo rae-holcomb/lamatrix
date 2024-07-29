@@ -1,7 +1,7 @@
 import numpy as np
 
 from .combine import StackedIndependentGenerator
-from .math import MathMixins
+from .math_mixins import MathMixins
 
 __all__ = ["BoundedGenerator"]
 

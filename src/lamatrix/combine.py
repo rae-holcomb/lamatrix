@@ -115,6 +115,7 @@ class StackedIndependentGenerator(Generator):
 
     def __mul__(self, other):
         if isinstance(other, Generator):
+            # SID(p1 + p2 + p1 x p2) 
             return StackedDependentGenerator(self, other)
         else:
             raise ValueError("Can only combine `Generator` objects.")
@@ -261,10 +262,6 @@ class StackedDependentGenerator(StackedIndependentGenerator):
         self._prior_mu = None
         self._prior_sigma = None
         self.sigma_mask = combine_masks(*[g.sigma_mask for g in self.generators])
-
-    @property
-    def width(self):
-        return np.prod([g.width for g in self.generators])
 
     def design_matrix(self, *args, **kwargs):
         return combine_matrices(

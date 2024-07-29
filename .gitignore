@@ -1,5 +1,7 @@
 sandbox/
 docs/use-cases/data
+src/lamatrix/notes.txt
+src/lamatrix/sandbox.ipynb
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
